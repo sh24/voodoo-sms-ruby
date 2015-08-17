@@ -1,7 +1,7 @@
 [VoodooSMS](http://www.voodoosms.com/) API
 ===============
 
-Supports Voodoo's API v2.1
+Supports Voodoo's API v2.5
 
 - [RubyGems](https://rubygems.org/gems/voodoo_sms)
 
