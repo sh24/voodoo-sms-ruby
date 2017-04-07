@@ -36,13 +36,11 @@ class VoodooSMS
 
   def get_sms(from, to, keyword = '')
     merge_params(from: format_date(from), to: format_date(to), keyword: keyword)
-    response = make_request('getSMS')['messages'] # unfortunately we can't use fetch_from_response here
-    if response.is_a?(Array)                      # response doesn't have messages key if no new messages
-      response.map { |r| OpenStruct.new(from: r['Originator'],
-        timestamp: DateTime.parse(r['TimeStamp']),
-        message: r['Message']) }
-    else
-      []
+    response = Array(make_request('getSMS')['messages']) # unfortunately we can't use fetch_from_response as the 'messages' key is not present when there are no messages.
+    response.map do |message|
+      OpenStruct.new(from: message['Originator'],
+                     timestamp: DateTime.parse(message['TimeStamp']),
+                     message: message['Message'])
     end
   end
 
@@ -53,66 +51,63 @@ class VoodooSMS
   end
 
   private
-    def merge_params(opts)
-      @params[:query].merge!(opts)
+
+  def merge_params(opts)
+    @params[:query].merge!(opts)
+  end
+
+  def make_request(method)
+    validate_parameters_for(method)
+
+    response = send_request!(method)
+
+    case response['result']
+    when 200, '200 OK' # inconsistencies :(
+      return response
+    when 'You dont have any messages'
+      return {} # :(
+    when 400 then raise Error::BadRequest.new(response.values.join(', '))
+    when 401 then raise Error::Unauthorised.new(response.values.join(', '))
+    when 402 then raise Error::NotEnoughCredit.new(response.values.join(', '))
+    when 403 then raise Error::Forbidden.new(response.values.join(', '))
+    when 513 then raise Error::MessageTooLarge.new(response.values.join(', '))
+    else
+      raise Error::Unexpected.new(response.values.join(', '))
     end
+  end
 
-    def make_request(method)
-      validate_parameters_for(method)
-
-      begin
-        response = self.class.get("/vapi/server/#{method}", @params)
-      rescue => e
-        raise Error::Unexpected.new(e.message)
-      end
-
-      case response['result']
-      when 200, '200 OK' # inconsistencies :(
-        return response
-      when 'You dont have any messages'
-        return {} # :(
-      when 400
-        raise Error::BadRequest.new(response.values.join(', '))
-      when 401
-        raise Error::Unauthorised.new(response.values.join(', '))
-      when 402
-        raise Error::NotEnoughCredit.new(response.values.join(', '))
-      when 403
-        raise Error::Forbidden.new(response.values.join(', '))
-      when 513
-        raise Error::MessageTooLarge.new(response.values.join(', '))
-      else
-        raise Error::Unexpected.new(response.values.join(', '))
-      end
+  def send_request!(method)
+    begin
+      self.class.get("/vapi/server/#{method}", @params)
+    rescue => e
+      raise Error::Unexpected.new(e.message)
     end
+  end
 
-    def validate_parameters_for(method)
-      case method
-      when 'sendSMS'
-        validate_originator  @params[:query][:orig]
-        validate_destination @params[:query][:dest]
-      end
-    end
 
-    def validate_originator(input)
-      raise Error::RequiredParameter.new if input.nil? || input.empty?
-      unless input.match /^[a-zA-Z0-9]{1,11}(\d{4})?$/
-        raise Error::InvalidParameterFormat.new('must be 15 numeric digits or 11 alphanumerics')
-      end
+  def validate_parameters_for(method)
+    case method
+    when 'sendSMS'
+      validate_originator  @params[:query][:orig]
+      validate_destination @params[:query][:dest]
     end
+  end
 
-    def validate_destination(input)
-      raise Error::RequiredParameter.new if input.nil? || input.empty?
-      unless input.match /^\d{10,15}$/
-        raise Error::InvalidParameterFormat.new('must be valid E.164 format')
-      end
-    end
+  def validate_originator(input)
+    raise Error::RequiredParameter.new if input.nil? || input.empty?
+    raise Error::InvalidParameterFormat.new('must be 15 numeric digits or 11 alphanumerics') unless input.match(/^[a-zA-Z0-9]{1,11}(\d{4})?$/)
+  end
 
-    def format_date(date)
-      date.respond_to?(:strftime) ? date.strftime("%F %T") : date
-    end
+  def validate_destination(input)
+    raise Error::RequiredParameter.new if input.nil? || input.empty?
+    raise Error::InvalidParameterFormat.new('must be valid E.164 format') unless input.match(/^\d{10,15}$/)
+  end
 
-    def fetch_from_response(response, key)
-      response.fetch(key) { raise Error::Unexpected.new("No #{key} found from Voodoo response!") }
-    end
+  def format_date(date)
+    date.respond_to?(:strftime) ? date.strftime("%F %T") : date
+  end
+
+  def fetch_from_response(response, key)
+    response.fetch(key) { raise Error::Unexpected.new("No #{key} found from Voodoo response!") }
+  end
 end
