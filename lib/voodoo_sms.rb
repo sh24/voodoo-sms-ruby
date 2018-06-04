@@ -1,7 +1,5 @@
 require 'httparty'
 
-# TODO: RDoc
-
 class VoodooSMS
   module Error
     class BadRequest < StandardError; end
@@ -91,13 +89,13 @@ class VoodooSMS
   end
 
   def validate_originator(input)
-    raise Error::RequiredParameter.new if input.nil? || input.empty?
-    raise Error::InvalidParameterFormat.new('must be 15 numeric digits or 11 alphanumerics') unless input.match(/^[a-zA-Z0-9]{1,11}(\d{4})?$/)
+    raise Error::RequiredParameter if input.nil? || input.empty?
+    raise Error::InvalidParameterFormat, 'must be 15 numeric digits or 11 alphanumerics' unless input =~ /^[a-zA-Z0-9]{1,11}(\d{4})?$/
   end
 
   def validate_destination(input)
-    raise Error::RequiredParameter.new if input.nil? || input.empty?
-    raise Error::InvalidParameterFormat.new('must be valid E.164 format') unless input.match(/^\d{10,15}$/)
+    raise Error::RequiredParameter if input.nil? || input.empty?
+    raise Error::InvalidParameterFormat, 'must be valid E.164 format' unless input =~ /^\d{10,15}$/
   end
 
   def format_date(date)
