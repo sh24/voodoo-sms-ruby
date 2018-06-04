@@ -1,16 +1,9 @@
 require 'httparty'
+require 'voodoo_sms/errors'
+
+# TODO: Refactor this into action classes (ie. VoodooSMS::GetCredit.call)
 
 class VoodooSMS
-  module Error
-    class BadRequest < StandardError; end
-    class Unauthorised < StandardError; end
-    class NotEnoughCredit < StandardError; end
-    class Forbidden < StandardError; end
-    class MessageTooLarge < StandardError; end
-    class Unexpected < StandardError; end
-    class RequiredParameter < StandardError; end
-    class InvalidParameterFormat < StandardError; end
-  end
 
   include HTTParty
   base_uri 'https://voodoosms.com'
