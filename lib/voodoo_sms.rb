@@ -66,24 +66,21 @@ class VoodooSMS
       return response
     when 'You dont have any messages'
       return {} # :(
-    when 400 then raise Error::BadRequest.new(response.values.join(', '))
-    when 401 then raise Error::Unauthorised.new(response.values.join(', '))
-    when 402 then raise Error::NotEnoughCredit.new(response.values.join(', '))
-    when 403 then raise Error::Forbidden.new(response.values.join(', '))
-    when 513 then raise Error::MessageTooLarge.new(response.values.join(', '))
+    when 400 then raise Error::BadRequest,      response.values.join(', ')
+    when 401 then raise Error::Unauthorised,    response.values.join(', ')
+    when 402 then raise Error::NotEnoughCredit, response.values.join(', ')
+    when 403 then raise Error::Forbidden,       response.values.join(', ')
+    when 513 then raise Error::MessageTooLarge, response.values.join(', ')
     else
-      raise Error::Unexpected.new(response.values.join(', '))
+      raise Error::Unexpected, response.values.join(', ')
     end
   end
 
   def send_request!(method)
-    begin
-      self.class.get("/vapi/server/#{method}", @params)
-    rescue => e
-      raise Error::Unexpected.new(e.message)
-    end
+    self.class.get("/vapi/server/#{method}", @params)
+  rescue StandardError => e
+    raise Error::Unexpected, e.message
   end
-
 
   def validate_parameters_for(method)
     case method
@@ -104,10 +101,10 @@ class VoodooSMS
   end
 
   def format_date(date)
-    date.respond_to?(:strftime) ? date.strftime("%F %T") : date
+    date.respond_to?(:strftime) ? date.strftime('%F %T') : date
   end
 
   def fetch_from_response(response, key)
-    response.fetch(key) { raise Error::Unexpected.new("No #{key} found from Voodoo response!") }
+    response.fetch(key) { raise Error::Unexpected, "No #{key} found from Voodoo response!" }
   end
 end
