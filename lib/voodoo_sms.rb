@@ -53,10 +53,9 @@ class VoodooSMS
     response = send_request!(method)
 
     case response['result']
-    when 200, '200 OK' # inconsistencies :(
-      return response
-    when 'You dont have any messages'
-      return {} # :(
+    when 200, '200 OK' then response
+    when 'You dont have any messages' then {}
+    when 'You does not have any messages' then {}
     when 400 then raise Error::BadRequest,      response.values.join(', ')
     when 401 then raise Error::Unauthorised,    response.values.join(', ')
     when 402 then raise Error::NotEnoughCredit, response.values.join(', ')
