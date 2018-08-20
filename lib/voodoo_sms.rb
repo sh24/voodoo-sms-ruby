@@ -6,7 +6,7 @@ require 'voodoo_sms/errors'
 class VoodooSMS
 
   include HTTParty
-  base_uri 'https://voodoosms.com'
+  base_uri 'https://www.voodoosms.com'
   default_params format: 'json'
   format :json
 
